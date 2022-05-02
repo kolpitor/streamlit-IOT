@@ -1,30 +1,19 @@
 import os
-os.system('git clone --recursive https://github.com/dmlc/xgboost')
-os.system('cd xgboost')
-os.system('sudo cp make/minimum.mk ./config.mk;')
-os.system('sudo make -j4;')
-os.system('sh build.sh')
-os.system('cd python-package')
-os.system('python setup.py install')
-os.system('pip install graphviz')
-os.system('pip install python-pydot')
-os.system('pip install python-pydot-ng')
-os.system('pip install -U scikit-learn scipy matplotlib')
+os.system('pip install pdpbox==0.2.1')
 
-from collections import namedtuple
-import altair as alt
-import math
-import streamlit as st
-import pandas
-import numpy
-import xgboost
-import graphviz
-from sklearn.metrics import mean_squared_error
+import pandas as pd
+from pdpbox.pdp import pdp_isolate, pdp_plot
 from sklearn.model_selection import train_test_split
-import matplotlib.pyplot
+from sklearn.metrics import mean_absolute_error
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectKBest
+from sklearn.ensemble import RandomForestRegressor
+from numpy import mean
 
 """
-# AI4Industry
+# IOT
 """
 
 
@@ -44,85 +33,72 @@ city_input = st.selectbox(
     "Brisbane",
     "Portland"), index=0)
 
-dataset = pandas.read_csv('weatherAUS.csv')
 
-location_dataset = dataset["Location"].unique()
-wind_dataset = dataset["WindGustDir"].unique()
-date_dataset = dataset["Date"].unique()
+df = pd.read_csv("city_temperature.csv")
 
-dataset.drop(dataset.loc[dataset['Location'] != city_input].index, inplace=True)
+def mergeStateToCountry():
+    df.loc[df['State'].notna(), 'Country'] = df['State']
+    df = df.loc[:, ~df.columns.str.contains('State')]
 
-i_RainTomorrow = dataset.columns.get_loc("RainTomorrow")
-#i_Location = dataset.columns.get_loc("Location")
-i_WindGustDir = dataset.columns.get_loc("WindGustDir")
-i_Date = dataset.columns.get_loc("Date")
-yes = dataset.iat[8, dataset.columns.get_loc("RainTomorrow")]
-no = dataset.iat[0, dataset.columns.get_loc("RainTomorrow")]
+i = 0
 
-for i in range(len(dataset)):
-    if (dataset.iat[i, i_RainTomorrow] == yes):
-        dataset.iat[i, i_RainTomorrow] = True
-    else:
-        dataset.iat[i, i_RainTomorrow] = False
-    #dataset.iat[i, i_Location] = numpy.where(location_dataset == dataset.iat[i, i_Location])[0][0]
-    if (pandas.isna(dataset.iat[i, i_WindGustDir])):
-        dataset.iat[i, i_WindGustDir] = 0
-    else:
-        dataset.iat[i, i_WindGustDir] = numpy.where(wind_dataset == dataset.iat[i, i_WindGustDir])[0][0] + 1
-    dataset.iat[i, i_Date] = numpy.where(date_dataset == dataset.iat[i, i_Date])[0][0]
+for region in df["Region"].unique():
+    df["Region"] = df["Region"].replace(region, str(i))
+    i += 1
     
+i = 0
+
+for country in df["Country"].unique():
+    df["Country"] = df["Country"].replace(country, str(i))
+    i += 1
     
-dataset = dataset.astype({'RainTomorrow': 'bool'})
-#dataset = dataset.astype({'Location': 'int'})
-dataset = dataset.astype({'WindGustDir': 'int'})
-dataset = dataset.astype({'Date': 'int'})
+i = 0
 
-dataset.drop(columns=["WindDir9am", "WindDir3pm", "WindSpeed9am", "WindSpeed3pm", "Temp9am", "Temp3pm", "RainToday"], inplace=True)
-dataset.drop(dataset.index[dataset.isnull().any(axis=1)], 0, inplace=True)
+for state in df["State"].unique():
+    df["State"] = df["State"].replace(state, str(i))
+    i += 1
+    
+i = 0
 
-dataset["Humidity"] = 0.0
-dataset["Pressure"] = 0.0
-dataset["Cloud"] = 0.0
+for city in df["City"].unique():
+    df["City"] = df["City"].replace(city, str(i))
+    i += 1
 
-for i in dataset.index:
-    humidity = (dataset["Humidity9am"][i] + dataset["Humidity3pm"][i]) / 2
-    dataset.at[i, "Humidity"] = humidity
-    pressure = (dataset["Pressure9am"][i] + dataset["Pressure3pm"][i]) / 2
-    dataset.at[i, "Pressure"] = pressure
-    cloud = (dataset["Cloud9am"][i] + dataset["Cloud3pm"][i]) / 2
-    dataset.at[i, "Cloud"] = cloud
+df = df.astype({"Region": "int"})
+df = df.astype({"Country": "int"})
+df = df.astype({"State": "int"})
+df = df.astype({"City": "int"})
 
-dataset.drop(columns=["Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", "Cloud9am", "Cloud3pm"], inplace=True)
+target = 'AvgTemperature'
+# Here Y would be our target
+Y = df[target]
+# Here X would contain the other column
+#X = df.loc[:, df.columns != target]
+X = df[['Month', 'Day', 'Year']]
 
-x, y = dataset.iloc[:,[False, False, True, True, False, True, True, True, True, True, True, True, True]],dataset.iloc[:,4]
+X_train, X_val, Y_train, Y_val = train_test_split(X, Y, test_size=0.25, random_state=42)
 
-data_dmatrix = xgboost.DMatrix(data=x,label=y)
+y_pred = [Y_train.mean()] * len(Y_train)
 
-X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=123)
+st.write('Baseline MAE: %f' % (round(mean_absolute_error(Y_train, y_pred), 5)))
 
-xg_reg = xgboost.XGBRegressor(colsample_bytree = colsample_bytree_input, learning_rate = learning_rate_input, max_depth = max_depth_input, alpha = alpha_input, n_estimators = n_estimators_input)
+lm = make_pipeline(StandardScaler(), LinearRegression(),)
 
-xg_reg.fit(X_train,y_train)
+lm.fit(X_train, Y_train)
 
-preds = xg_reg.predict(X_test)
+st.write('Linear Regression Training MAE: %f' % (round(mean_absolute_error(Y_train, lm.predict(X_train)), 5)))
+st.write('Linear Regression Test MAE: %f' % (round(mean_absolute_error(Y_val, lm.predict(X_val)), 5)))
 
-rmse = numpy.sqrt(mean_squared_error(y_test, preds))
-st.write("RMSE: %f" % (rmse))
+forestModel = make_pipeline(
+    SelectKBest(k="all"), 
+    StandardScaler(), 
+    RandomForestRegressor(
+        n_estimators=100,
+        max_depth=50,
+        random_state=77,
+        n_jobs=-1))
 
-params = {'colsample_bytree': colsample_bytree_input,'learning_rate': learning_rate_input,
-                'max_depth': max_depth_input, 'alpha': alpha_input}
+forestModel.fit (X_train, Y_train)
 
-cv_results = xgboost.cv(dtrain=data_dmatrix, params=params, nfold=3,
-                    num_boost_round=50,early_stopping_rounds=10,metrics="rmse", as_pandas=True, seed=123)
-
-st.write((cv_results["test-rmse-mean"]).tail(1))
-
-xg_reg = xgboost.train(params=params, dtrain=data_dmatrix, num_boost_round=10)
-
-#xgboost.plot_tree(xg_reg,num_trees=0)
-#matplotlib.pyplot.rcParams['figure.figsize'] = [200, 200]
-#matplotlib.pyplot.show()
-
-#xgboost.plot_importance(xg_reg)
-#matplotlib.pyplot.rcParams['figure.figsize'] = [5, 5]
-#matplotlib.pyplot.show()
+st.write('Random Forest Regressor Model Training MAE: %f' % (mean_absolute_error(Y_train, forestModel.predict(X_train))))
+st.write('Random Forest Regressor Model Test MAE: %f' % (mean_absolute_error(Y_val, forestModel.predict(X_val))))
