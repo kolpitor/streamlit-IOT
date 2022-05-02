@@ -1,7 +1,6 @@
 import os
 os.system('pip install pdpbox==0.2.1')
 
-import pandas as pd
 from pdpbox.pdp import pdp_isolate, pdp_plot
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
@@ -10,7 +9,9 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectKBest
 from sklearn.ensemble import RandomForestRegressor
+import pandas as pd
 from numpy import mean
+import streamlit as st
 
 """
 # IOT
