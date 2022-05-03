@@ -26,10 +26,12 @@ n_estimators_input = st.slider("n estimators", 1, 100, 20)
 
 
 df = pd.read_csv("new_dataset (2).csv")
+Region = df["Region"].unique()
+Region2 = df["Region"].drop_duplicates()
 
-st.write(df["Region"].unique())
+st.write(Region)
+st.write(Region2)
 
-st.write(df["Region"].drop_duplicates())
 city_input = st.selectbox(
      'Which city do you want to predict rain ?',
      ("all",
