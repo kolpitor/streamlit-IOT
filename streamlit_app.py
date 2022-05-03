@@ -23,19 +23,15 @@ colsample_bytree_input = st.slider("Colsample bytree", 0.0, 1.0, 0.5)
 learning_rate_input = st.slider("Learning rate", 0.0, 1.0, 0.2)
 alpha_input = st.slider("Alpha", 1, 100, 10)
 n_estimators_input = st.slider("n estimators", 1, 100, 20)
-city_input = st.selectbox(
-     'Which city do you want to predict rain ?',
-     ("Canberra",
-    "Albury",
-    "Penrith",
-    "Sydney",
-    "MountGinini",
-    "Bendigo",
-    "Brisbane",
-    "Portland"), index=0)
 
 
 df = pd.read_csv("new_dataset (2).csv")
+
+
+city_input = st.selectbox(
+     'Which city do you want to predict rain ?',
+     ("all",
+     df["Region"].unique()), index=0)
 
 def mergeStateToCountry():
     df.loc[df['State'].notna(), 'Country'] = df['State']
