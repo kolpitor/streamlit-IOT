@@ -34,8 +34,7 @@ st.write(Region2)
 
 city_input = st.selectbox(
      'Which city do you want to predict rain ?',
-     ("all",
-     df["Region"].drop_duplicates()), index=0)
+     (df["Region"].unique()), index=0)
 
 def mergeStateToCountry():
     df.loc[df['State'].notna(), 'Country'] = df['State']
