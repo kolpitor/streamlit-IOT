@@ -27,11 +27,13 @@ n_estimators_input = st.slider("n estimators", 1, 100, 20)
 
 df = pd.read_csv("new_dataset (2).csv")
 
+st.write(df["Region"].unique())
 
+st.write(df["Region"].drop_duplicates())
 city_input = st.selectbox(
      'Which city do you want to predict rain ?',
      ("all",
-     df["Region"].unique()), index=0)
+     df["Region"].drop_duplicates()), index=0)
 
 def mergeStateToCountry():
     df.loc[df['State'].notna(), 'Country'] = df['State']
