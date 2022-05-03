@@ -1,5 +1,5 @@
 import os
-os.system('pip install pdpbox==0.2.1')
+os.system('pip3 install pdpbox==0.2.1')
 
 from pdpbox.pdp import pdp_isolate, pdp_plot
 from sklearn.model_selection import train_test_split
