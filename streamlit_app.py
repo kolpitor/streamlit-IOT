@@ -35,7 +35,7 @@ city_input = st.selectbox(
     "Portland"), index=0)
 
 
-df = pd.read_csv("city_temperature.csv")
+df = pd.read_csv("new_dataset (2).csv")
 
 def mergeStateToCountry():
     df.loc[df['State'].notna(), 'Country'] = df['State']
